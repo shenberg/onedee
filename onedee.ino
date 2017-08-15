@@ -40,8 +40,15 @@ template<class T, size_t N>
 constexpr int length(const T (&arr)[N]) {
   return N;
 }
-constexpr bool tempo[4] = {false, false, false, true};
+
+constexpr bool tempo[] = {false, false, false, true, false, true, true};
+//constexpr bool tempo2[4] = {false, false, true, true};
+//constexpr bool tempos[][] = {tempo1, tempo2, tempo1, tempo1, tempo2};
 constexpr int bpm = 120;
+constexpr int DEBOUNCE_TIME = 20;
+
+
+int position = 0;
 
 void fill_leds_with_tempo() {
   long time = (millis() - startTime);
@@ -57,17 +64,67 @@ void fill_leds_with_tempo() {
   }
 }
 
+void button_pressed() {
+  position = (position + 1) % NUM_LEDS;
+}
+
+long debounceEnd = 0;
+
+bool was_button_pressed(int currentState) {
+  static enum {
+    WAITING_FOR_PRESS,
+    DEBOUNCE,
+    WAITING_FOR_LEAVE
+  } logicState;
+
+  switch(logicState) {
+    case WAITING_FOR_PRESS:
+      if (currentState) {
+        logicState = DEBOUNCE;
+        debounceEnd = millis() + DEBOUNCE_TIME;
+      }
+      break;
+    case DEBOUNCE:
+      if (millis() >= debounceEnd) {
+        if (currentState) {
+          logicState = WAITING_FOR_LEAVE;
+          return true;
+        } else {
+          logicState = WAITING_FOR_PRESS;
+        }
+      }
+      break;
+    case WAITING_FOR_LEAVE:
+      if (!currentState) {
+        logicState = WAITING_FOR_PRESS;
+      }
+      break;
+  }
+  return false;
+}
+
+long nextPressTime = 0;
+
 void loop() {
   // read the state of the pushbutton value:
   buttonState = digitalRead(buttonPin);
   fill_leds_with_tempo();
+  //if ((long)leds[position] == 0) {
+  leds[position] += CRGB::Green;
+  //}
+  long time = millis();
   // check if the pushbutton is pressed.
   // if it is, the buttonState is HIGH:
-  if (buttonState == HIGH) {
+  /*if ((buttonState == HIGH) && (time > nextPressTime)) {
+    nextPressTime = time + DEBOUNCE_TIME;
+    button_pressed();
   	//Serial.println("BUTTON!");
-    leds.fill_solid(CRGB::Green);
+    //leds.fill_solid(CRGB::Green);
   } else {
     //leds.fill_solid(CRGB::Blue);
+  }*/
+  if (was_button_pressed(buttonState)) {
+    button_pressed();
   }
   
   FastLED.show();
