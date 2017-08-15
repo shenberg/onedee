@@ -47,7 +47,6 @@ constexpr bool tempo[] = {false, false, false, true, false, true, true};
 constexpr int bpm = 120;
 constexpr int DEBOUNCE_TIME = 20;
 
-
 int position = 0;
 
 void fill_leds_with_tempo() {
@@ -65,7 +64,12 @@ void fill_leds_with_tempo() {
 }
 
 void button_pressed() {
-  position = (position + 1) % NUM_LEDS;
+  int nextPos;
+  for (nextPos = (position + 1) % NUM_LEDS; 
+       (long)leds[nextPos] != 0;
+       nextPos = (nextPos + 1) % NUM_LEDS) {
+  }
+  position = nextPos;
 }
 
 long debounceEnd = 0;
