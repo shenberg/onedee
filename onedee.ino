@@ -12,13 +12,14 @@ CRGBArray<NUM_LEDS> leds;
 #define BRIGHTNESS          96
 #define FRAMES_PER_SECOND  120
 
-// constants won't change. They're used here to
-// set pin numbers:
+template<class T, size_t N>
+constexpr int length(const T (&arr)[N]) {
+  return N;
+}
+
 constexpr int buttonPin = 2;     // the number of the pushbutton pin
 
-constexpr int DEBOUNCE_TIME = 20;
-
-long startTime = 0; // bpm relative to here
+constexpr int DEBOUNCE_TIME = 20; // milliseconds - time given for button-press to complete
 
 long debounceEnd = 0;
 enum {
@@ -55,30 +56,14 @@ bool was_button_pressed(int currentState) {
   return false;
 }
 
+
+long startTime = 0; // bpm relative to here
 int position = 0;
 
 void reset_game() {
   startTime = millis();
   logicState = WAITING_FOR_PRESS;
   position = 0;
-}
-
-void setup() {
-  // initialize the pushbutton pin as an input:
-  pinMode(buttonPin, INPUT);
-  Serial.begin(9600);
-  Serial.println("begin");
-
-    // tell FastLED about the LED strip configuration
-  FastLED.addLeds<LED_TYPE,DATA_PIN,COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
-
-  // set master brightness control
-  FastLED.setBrightness(BRIGHTNESS);
-}
-
-template<class T, size_t N>
-constexpr int length(const T (&arr)[N]) {
-  return N;
 }
 
 constexpr bool tempo[] = {false, false, false, true, false, true, true};
@@ -124,8 +109,6 @@ void lose_animation() {
   }
 }
 
-long nextPressTime = 0;
-
 void loop() {
   // read the state of the pushbutton value:
   int buttonState = digitalRead(buttonPin);
@@ -138,20 +121,25 @@ void loop() {
   leds[position] += CRGB::Green;
   // check if the pushbutton is pressed.
   // if it is, the buttonState is HIGH:
-  /*
-  long time = millis();
-  if ((buttonState == HIGH) && (time > nextPressTime)) {
-    nextPressTime = time + DEBOUNCE_TIME;
-    button_pressed();
-  	//Serial.println("BUTTON!");
-    //leds.fill_solid(CRGB::Green);
-  } else {
-    //leds.fill_solid(CRGB::Blue);
-  }*/
   if (was_button_pressed(buttonState)) {
     button_pressed();
   }
   
   FastLED.show();
   delay(1000 / FRAMES_PER_SECOND);
+}
+
+void setup() {
+  // initialize the pushbutton pin as an input:
+  pinMode(buttonPin, INPUT);
+  Serial.begin(9600);
+  Serial.println("begin");
+
+    // tell FastLED about the LED strip configuration
+  FastLED.addLeds<LED_TYPE,DATA_PIN,COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
+
+  // set master brightness control
+  FastLED.setBrightness(BRIGHTNESS);
+
+  reset_game();
 }
