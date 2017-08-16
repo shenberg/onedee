@@ -17,7 +17,9 @@ constexpr int length(const T (&arr)[N]) {
   return N;
 }
 
-constexpr int buttonPin = 2;     // the number of the pushbutton pin
+constexpr int DOWNGRADE_THRESHOLD = 2;
+
+constexpr int BUTTON_PIN = 2;     // the number of the pushbutton pin
 
 constexpr int DEBOUNCE_TIME = 20; // milliseconds - time given for button-press to complete
 
@@ -58,7 +60,9 @@ bool was_button_pressed(int currentState) {
 
 
 long startTime = 0; // bpm relative to here
+int level = 0;
 int position = 0;
+int lossCount = 0;
 
 void reset_game() {
   startTime = millis();
@@ -66,7 +70,7 @@ void reset_game() {
   position = 0;
 }
 
-constexpr bool tempo[] = {false, false, false, true, false, true, true};
+constexpr bool tempo[] = {false, false, false, true, false, true};
 //constexpr bool tempo2[4] = {false, false, true, true};
 //constexpr bool tempos[][] = {tempo1, tempo2, tempo1, tempo1, tempo2};
 constexpr int bpm = 120;
@@ -74,8 +78,8 @@ constexpr int bpm = 120;
 void fill_leds_with_tempo() {
   long time = (millis() - startTime);
   int beat = ((bpm * time) / 60000) % length(tempo);
-  leds[0] = CRGB::Black;
-  for (int i = 1; i < NUM_LEDS; i++) {
+  leds[NUM_LEDS - 1] = leds[0] = CRGB::Black;
+  for (int i = 1; i < NUM_LEDS - 1; i++) {
     if (tempo[beat]) {
       leds[i] = CRGB::Red;
     } else {
@@ -94,8 +98,26 @@ void button_pressed() {
   position = nextPos;
 }
 
+void next_level() {
+  level++; // TODO: actual logic
+}
+
+void lower_level() {
+  if (level > 0) {
+    level--;
+  }
+}
+
 boolean collision(int position) {
   return (long)leds[position] != 0;
+}
+
+boolean won(int position) {
+  return position == NUM_LEDS - 1;
+}
+
+void draw_player(int position) {
+  leds[position] += CRGB::Green;
 }
 
 void lose_animation() {
@@ -109,16 +131,52 @@ void lose_animation() {
   }
 }
 
+void win_animation() {
+  for(int i = NUM_LEDS - 1; i > 0; i--) {
+    leds(i, NUM_LEDS - 1).fadeToBlackBy(73);
+    leds[i] = CRGB::Green;
+    FastLED.show();
+    delay(10);
+  }
+  for(int i = 0; i < 100; i++) {
+    leds.fadeToBlackBy(50);
+    FastLED.show();
+    delay(10);
+  }
+}
+
+void lose() {
+  lose_animation();
+  lossCount += 1;
+  if (lossCount >= DOWNGRADE_THRESHOLD) {
+    lower_level();
+    lossCount = 0;
+  }
+  reset_game();  
+}
+
+void win() {
+  win_animation();
+  next_level();
+  lossCount = 0;
+  reset_game();  
+}
+
 void loop() {
   // read the state of the pushbutton value:
-  int buttonState = digitalRead(buttonPin);
+  int buttonState = digitalRead(BUTTON_PIN);
   fill_leds_with_tempo();
   if (collision(position)) {
-    lose_animation();
-    reset_game();
+    lose();
     return;
   }
-  leds[position] += CRGB::Green;
+  // NOTE: order matters since we compare to the leds array for collision detection :(
+  draw_player(position);
+
+  if (won(position)) {
+    win();
+    return;
+  }
   // check if the pushbutton is pressed.
   // if it is, the buttonState is HIGH:
   if (was_button_pressed(buttonState)) {
@@ -131,7 +189,7 @@ void loop() {
 
 void setup() {
   // initialize the pushbutton pin as an input:
-  pinMode(buttonPin, INPUT);
+  pinMode(BUTTON_PIN, INPUT);
   Serial.begin(9600);
   Serial.println("begin");
 
@@ -140,6 +198,6 @@ void setup() {
 
   // set master brightness control
   FastLED.setBrightness(BRIGHTNESS);
-
+  win_animation();
   reset_game();
 }
