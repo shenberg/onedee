@@ -16,70 +16,18 @@ CRGBArray<NUM_LEDS> leds;
 // set pin numbers:
 constexpr int buttonPin = 2;     // the number of the pushbutton pin
 
+constexpr int DEBOUNCE_TIME = 20;
 
 long startTime = 0; // bpm relative to here
 
-// variables will change:
-int buttonState = 0;         // variable for reading the pushbutton status
-
-void setup() {
-  // initialize the pushbutton pin as an input:
-  pinMode(buttonPin, INPUT);
-  Serial.begin(9600);
-  Serial.println("begin");
-
-    // tell FastLED about the LED strip configuration
-  FastLED.addLeds<LED_TYPE,DATA_PIN,COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
-
-  // set master brightness control
-  FastLED.setBrightness(BRIGHTNESS);
-  startTime = millis();
-}
-
-template<class T, size_t N>
-constexpr int length(const T (&arr)[N]) {
-  return N;
-}
-
-constexpr bool tempo[] = {false, false, false, true, false, true, true};
-//constexpr bool tempo2[4] = {false, false, true, true};
-//constexpr bool tempos[][] = {tempo1, tempo2, tempo1, tempo1, tempo2};
-constexpr int bpm = 120;
-constexpr int DEBOUNCE_TIME = 20;
-
-int position = 0;
-
-void fill_leds_with_tempo() {
-  long time = (millis() - startTime);
-  int beat = ((bpm * time) / 60000) % length(tempo);
-
-  for (int i = 0; i < NUM_LEDS; i++) {
-    if (tempo[beat]) {
-      leds[i] = CRGB::Red;
-    } else {
-      leds[i] = CRGB::Black;
-    }
-    beat = (beat + 1) % length(tempo);
-  }
-}
-
-void button_pressed() {
-  int nextPos;
-  for (nextPos = (position + 1) % NUM_LEDS; 
-       (long)leds[nextPos] != 0;
-       nextPos = (nextPos + 1) % NUM_LEDS) {
-  }
-  position = nextPos;
-}
-
 long debounceEnd = 0;
-
-bool was_button_pressed(int currentState) {
-  static enum {
+enum {
     WAITING_FOR_PRESS,
     DEBOUNCE,
     WAITING_FOR_LEAVE
-  } logicState;
+} logicState;
+
+bool was_button_pressed(int currentState) {
 
   switch(logicState) {
     case WAITING_FOR_PRESS:
@@ -107,19 +55,92 @@ bool was_button_pressed(int currentState) {
   return false;
 }
 
+int position = 0;
+
+void reset_game() {
+  startTime = millis();
+  logicState = WAITING_FOR_PRESS;
+  position = 0;
+}
+
+void setup() {
+  // initialize the pushbutton pin as an input:
+  pinMode(buttonPin, INPUT);
+  Serial.begin(9600);
+  Serial.println("begin");
+
+    // tell FastLED about the LED strip configuration
+  FastLED.addLeds<LED_TYPE,DATA_PIN,COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
+
+  // set master brightness control
+  FastLED.setBrightness(BRIGHTNESS);
+}
+
+template<class T, size_t N>
+constexpr int length(const T (&arr)[N]) {
+  return N;
+}
+
+constexpr bool tempo[] = {false, false, false, true, false, true, true};
+//constexpr bool tempo2[4] = {false, false, true, true};
+//constexpr bool tempos[][] = {tempo1, tempo2, tempo1, tempo1, tempo2};
+constexpr int bpm = 120;
+
+void fill_leds_with_tempo() {
+  long time = (millis() - startTime);
+  int beat = ((bpm * time) / 60000) % length(tempo);
+  leds[0] = CRGB::Black;
+  for (int i = 1; i < NUM_LEDS; i++) {
+    if (tempo[beat]) {
+      leds[i] = CRGB::Red;
+    } else {
+      leds[i] = CRGB::Black;
+    }
+    beat = (beat + 1) % length(tempo);
+  }
+}
+
+void button_pressed() {
+  int nextPos;
+  for (nextPos = (position + 1) % NUM_LEDS; 
+       (long)leds[nextPos] != 0;
+       nextPos = (nextPos + 1) % NUM_LEDS) {
+  }
+  position = nextPos;
+}
+
+boolean collision(int position) {
+  return (long)leds[position] != 0;
+}
+
+void lose_animation() {
+  for (int i = 0; i < 3; i++) {
+    leds[position] = CRGB::Yellow;
+    FastLED.show();
+    delay(100);
+    leds[position] = CRGB::Black;
+    FastLED.show();
+    delay(100);    
+  }
+}
+
 long nextPressTime = 0;
 
 void loop() {
   // read the state of the pushbutton value:
-  buttonState = digitalRead(buttonPin);
+  int buttonState = digitalRead(buttonPin);
   fill_leds_with_tempo();
-  //if ((long)leds[position] == 0) {
+  if (collision(position)) {
+    lose_animation();
+    reset_game();
+    return;
+  }
   leds[position] += CRGB::Green;
-  //}
-  long time = millis();
   // check if the pushbutton is pressed.
   // if it is, the buttonState is HIGH:
-  /*if ((buttonState == HIGH) && (time > nextPressTime)) {
+  /*
+  long time = millis();
+  if ((buttonState == HIGH) && (time > nextPressTime)) {
     nextPressTime = time + DEBOUNCE_TIME;
     button_pressed();
   	//Serial.println("BUTTON!");
