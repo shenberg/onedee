@@ -9,7 +9,7 @@ FASTLED_USING_NAMESPACE
 
 CRGBArray<NUM_LEDS> leds;
 
-#define BRIGHTNESS          96
+#define BRIGHTNESS          64
 #define FRAMES_PER_SECOND  120
 
 template<class T, size_t N>
@@ -61,6 +61,7 @@ bool was_button_pressed(int currentState) {
 //const CRGB EMPTY_SPOT = CRGB(0,64,255);
 const CRGB EMPTY_SPOT = CRGB(0,0,0);
 const CRGB FILLED_SPOT = CRGB(255,64,0);
+const CRGB PLAYER_COLOR = CHSV(105, 255, 255);
 
 
 long startTime = 0; // bpm relative to here
@@ -74,10 +75,11 @@ void reset_game() {
   position = 0;
 }
 
-constexpr bool tempo[] = {false, false, false, true, false, true};
+constexpr bool tempo[] = {true, false, false, false, true, false, true, false, false, false, true, false, true, false, true, false, false, false, false,};
+// constexpr bool tempo[] = {false, false, false, true, false, true};
 //constexpr bool tempo2[4] = {false, false, true, true};
 //constexpr bool tempos[][] = {tempo1, tempo2, tempo1, tempo1, tempo2};
-constexpr int bpm = 120;
+constexpr int bpm = 80;
 
 void fill_leds_with_tempo() {
   long time = (millis() - startTime);
@@ -121,7 +123,7 @@ boolean won(int position) {
 }
 
 void draw_player(int position) {
-  leds[position] = CRGB::Green;
+  leds[position] = PLAYER_COLOR;
 }
 
 void lose_animation() {
@@ -138,7 +140,7 @@ void lose_animation() {
 void win_animation() {
   for(int i = NUM_LEDS - 1; i > 0; i--) {
     leds(i, NUM_LEDS - 1).fadeToBlackBy(73);
-    leds[i] = CRGB::Green;
+    leds[i] = PLAYER_COLOR;
     FastLED.show();
     delay(10);
   }
