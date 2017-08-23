@@ -58,6 +58,10 @@ bool was_button_pressed(int currentState) {
   return false;
 }
 
+//const CRGB EMPTY_SPOT = CRGB(0,64,255);
+const CRGB EMPTY_SPOT = CRGB(0,0,0);
+const CRGB FILLED_SPOT = CRGB(255,64,0);
+
 
 long startTime = 0; // bpm relative to here
 int level = 0;
@@ -78,12 +82,12 @@ constexpr int bpm = 120;
 void fill_leds_with_tempo() {
   long time = (millis() - startTime);
   int beat = ((bpm * time) / 60000) % length(tempo);
-  leds[NUM_LEDS - 1] = leds[0] = CRGB::Black;
+  leds[NUM_LEDS - 1] = leds[0] = EMPTY_SPOT;
   for (int i = 1; i < NUM_LEDS - 1; i++) {
     if (tempo[beat]) {
-      leds[i] = CRGB::Red;
+      leds[i] = FILLED_SPOT;
     } else {
-      leds[i] = CRGB::Black;
+      leds[i] = EMPTY_SPOT;
     }
     beat = (beat + 1) % length(tempo);
   }
@@ -92,7 +96,7 @@ void fill_leds_with_tempo() {
 void button_pressed() {
   int nextPos;
   for (nextPos = (position + 1) % NUM_LEDS; 
-       (long)leds[nextPos] != 0;
+       leds[nextPos] != EMPTY_SPOT;
        nextPos = (nextPos + 1) % NUM_LEDS) {
   }
   position = nextPos;
@@ -109,7 +113,7 @@ void lower_level() {
 }
 
 boolean collision(int position) {
-  return (long)leds[position] != 0;
+  return leds[position] != EMPTY_SPOT;
 }
 
 boolean won(int position) {
@@ -117,7 +121,7 @@ boolean won(int position) {
 }
 
 void draw_player(int position) {
-  leds[position] += CRGB::Green;
+  leds[position] = CRGB::Green;
 }
 
 void lose_animation() {
